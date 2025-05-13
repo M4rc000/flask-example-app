@@ -1,0 +1,35 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <form method="POST" class="card card-body">
+        <h2 class="text-center mb-4">Register</h2>
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.name.label(class="form-label") }}
+          {{ form.name(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.username.label(class="form-label") }}
+          {{ form.username(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.email.label(class="form-label") }}
+          {{ form.email(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.password.label(class="form-label") }}
+          {{ form.password(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.confirm_password.label(class="form-label") }}
+          {{ form.confirm_password(class="form-control") }}
+        </div>
+        {{ form.submit(class="btn btn-success w-100") }}
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
