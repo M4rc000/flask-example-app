@@ -1,0 +1,52 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="card">
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th class="text-center">Active</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ u.username }}</td>
+                        <td>{{ u.email }}</td>
+                        <td class="text-center">
+                            {% if u.is_active %}
+                                <span class="badge bg-success"><i class="align-center" data-feather="check"></i></span></span>
+                            {% else %}
+                                <span class="badge bg-danger"><i class="align-center" data-feather="x"></i></span></span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <form action="{{ url_for('main.toggle_active_user', user_id=u.id) }}" method="post" style="display:inline;">
+                                <button class="btn btn-sm btn-warning" type="submit">
+                                    {% if u.is_active %}Deactivate{% else %}Activate{% endif %}
+                                </button>
+                            </form>
+                            <form action="{{ url_for('main.delete_user', user_id=u.id) }}" method="post" style="display:inline;" onsubmit="return confirm('Are you sure?')">
+                                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>                
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock  %}
+
+{% block script %}
+<script>
+    
+</script>
+{% endblock  %}
