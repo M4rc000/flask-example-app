@@ -2,6 +2,11 @@
 {% block content %}
 <div class="container-fluid p-0">
     <div class="card">
+        <div class="card-header">
+            <a class="btn btn-sm btn-primary" href="{{ url_for('main.add_manage_user') }}">
+                <i class="align-center" data-feather="plus"></i></span>
+            </a>
+        </div>
         <div class="card-body">
             <table class="table">
                 <thead>
@@ -27,14 +32,15 @@
                             {% endif %}
                         </td>
                         <td class="text-center">
-                            <form action="{{ url_for('main.toggle_active_user', user_id=u.id) }}" method="post" style="display:inline;">
-                                <button class="btn btn-sm btn-warning" type="submit">
-                                    {% if u.is_active %}Deactivate{% else %}Activate{% endif %}
-                                </button>
-                            </form>
-                            <form action="{{ url_for('main.delete_user', user_id=u.id) }}" method="post" style="display:inline;" onsubmit="return confirm('Are you sure?')">
-                                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
-                            </form>
+                            <a class="btn btn-sm btn-success" href="{{ url_for('main.show_manage_user', hashid=u.hashid) }}">
+                                <i class="align-center" data-feather="info"></i></span>
+                            </a>
+                            <a class="btn btn-sm btn-warning" href="{{ url_for('main.edit_manage_user', hashid=u.hashid) }}">
+                                <i class="align-center" data-feather="edit"></i></span>
+                            </a>
+                            <a class="btn btn-sm btn-danger" id="btn-delete" href="#" data-id="{{ u.hashid }}" data-username="{{ u.username }}">
+                                <i class="align-center" data-feather="trash-2"></i>
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -47,6 +53,44 @@
 
 {% block script %}
 <script>
-    
+    $(document).ready(function(){
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            {% if category == 'adduser_error' %}
+              Swal.fire({
+                title: 'Oops...',
+                icon: 'error',
+                text: '{{ message }}',
+                showConfirmButton: false,
+                timer: 3000
+              });
+            {% elif category == 'success' %}
+              Swal.fire({
+                title: 'Success!',
+                icon: 'success',
+                text: '{{ message }}',
+                showConfirmButton: false,
+                timer: 3000
+              });
+            {% endif %}
+          {% endfor %}
+        {% endwith %}
+
+        $('#btn-delete').on('click', function(){
+            let id = $(this).data('id');
+            let username = $(this).data('username');
+
+            Swal.fire({
+                title: `Do you want delete user: ${username}?`,
+                showDenyButton: false,
+                showCancelButton: true,
+                confirmButtonText: "Yes",
+                }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href=`/admin/manage-user/delete/${id}`;
+                }
+            });
+        });
+    });
 </script>
-{% endblock  %}
+{% endblock %}

@@ -12,6 +12,7 @@
 
     <link href="{{ url_for('static',filename='css/app.css')}}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static',filename='vendor/bootstrap-icons/bootstrap-icons.min.css')}}" rel="stylesheet">
 </head>
 
 <body>
@@ -113,17 +114,6 @@
                     </li>
                 </ul>
 
-                <div class="sidebar-cta">
-                    <div class="sidebar-cta-content">
-                        <strong class="d-inline-block mb-2">Upgrade to Pro</strong>
-                        <div class="mb-3 text-sm">
-                            Are you looking for more components? Check out our premium version.
-                        </div>
-                        <div class="d-grid">
-                            <a href="upgrade-to-pro.html" class="btn btn-primary">Upgrade to Pro</a>
-                        </div>
-                    </div>
-                </div>
             </div>
         </nav>
 
@@ -289,8 +279,8 @@
 
                             <a class="nav-link dropdown-toggle d-none d-sm-inline-block" href="#"
                                 data-bs-toggle="dropdown">
-                                <img src="{{ url_for('static', filename='img/avatars/avatar.jpg')}}" class="avatar img-fluid rounded me-1"
-                                    alt="{{ user.username }}" /> <span class="text-dark">{{ user.username }}</span>
+                                <img src="{{ url_for('static', filename='img/' + usersession.picture) }}" class="avatar img-fluid rounded me-1" alt="{{ usersession.username }}" />
+                                <span class="text-dark">{{ usersession.username }}</span>
                             </a>
                             <div class="dropdown-menu dropdown-menu-end">
                                 <a class="dropdown-item" href="/user/profile"><i class="align-middle me-1"
@@ -309,6 +299,13 @@
                     </ul>
                 </div>
             </nav>
+
+            <h2 class="mx-5 mt-4">{{ title }}</h2>
+            <div style="margin-left: 50px; margin-top: 3px; font-size: 16px">
+                <span style="color: #6c757d; font-weight: bold">Admin</span>
+                <span style="margin: 0 8px;">&#8250;</span>
+                <span style="font-weight: bold;">{{ title }}</span>
+            </div>
 
             <main class="content">
                 {% block content %}{% endblock %}

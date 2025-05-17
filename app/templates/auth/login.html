@@ -34,7 +34,7 @@
           </div>
         </div>
         <div class="text-center mb-3">
-          Don't have an account? <a href="/register">Sign up</a>
+          Don't have an account? <a href="/register" style="text-decoration: none">Sign up</a>
         </div>
       </div>
     </div>
@@ -47,13 +47,13 @@
   document.addEventListener("DOMContentLoaded", function() {
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}
-        {% if category == 'register_error' %}
+        {% if category == 'login_error' %}
           Swal.fire({
             title: 'Oops...',
             icon: 'error',
             text: '{{ message }}',
             showConfirmButton: false,
-            timer: 2500
+            timer: 3000
           });
         {% elif category == 'success' %}
           Swal.fire({
@@ -61,7 +61,7 @@
             icon: 'success',
             text: '{{ message }}',
             showConfirmButton: false,
-            timer: 2500
+            timer: 3000
           });
         {% endif %}
       {% endfor %}

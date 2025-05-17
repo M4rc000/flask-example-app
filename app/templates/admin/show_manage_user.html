@@ -1,0 +1,38 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 col-xl-12">
+        <div class="card">
+            <div class="card-body h-100">
+                <div class="align-items-start">
+                    <div class="mb-3">                                
+                        <strong>{{ form.name.label(class="form-label") }}</strong>
+                        {{ form.name(class="form-control form-control-lg", placeholder="Enter your name", value=user.name or '', readonly=True) }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>{{ form.username.label(class="form-label") }}</strong>
+                        {{ form.username(class="form-control form-control-lg", placeholder="Enter your username", value=user.username or '', readonly=True) }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>{{ form.email.label(class="form-label") }}</strong>
+                        {{ form.email(class="form-control form-control-lg", placeholder="Enter your email", value=user.email or '', readonly=True) }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>{{ form.is_active.label(class="form-label") }}</strong>
+                        <input type="text" class="form-control form-control-lg" value="{{ 'Active' if user.is_active == 1 else 'Not Active' }}" readonly>
+                    </div>                        
+                </div>
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-secondary"><a href="/admin/manage-user" style="text-decoration: none; color: white">Back</a></button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock  %}
+
+{% block script %}
+<script>
+    
+</script>
+{% endblock  %}

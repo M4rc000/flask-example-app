@@ -1,15 +1,94 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
+<style>
+    .custom-col {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .custom-button {
+        flex-grow: 1;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer; /* Tambahkan cursor agar terlihat interaktif */
+    }
+
+    .profile-image-container {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin: 0 auto;
+    }
+
+    .profile-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    #upload-profile-picture {
+        display: none; /* Sembunyikan input file secara default */
+    }
+
+    .edit-icon-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .edit-icon-overlay i {
+        color: white;
+        font-size: 2em;
+    }
+
+    .profile-image-container:hover .edit-icon-overlay {
+        opacity: 1;
+    }
+</style>
 <div class="container p-0">
     <div class="row">
         <div class="col-md-4 col-xl-4">
             <div class="card mb-3">
+                <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
                 <div class="card-body text-center">
-                    <img src="{{ url_for('static', filename='img/avatars/avatar-4.jpg')}}" alt="Christina Mason"
-                        class="img-fluid rounded-circle mb-2" width="128" height="128" />
+                    <div class="profile-image-container">
+                        <img src="{{ url_for('static', filename='img/' + usersession.picture) }}" class="avatar img-fluid rounded me-1 profile-image"
+                             alt="{{ usersession.username }}" style="width: 100%; height: 100%; object-fit: cover;"/>
+                        <div class="edit-icon-overlay" id="edit-profile-picture">
+                            <i class="align-middle" data-feather="edit"></i>
+                        </div>
+                    </div>
                     <h5 class="card-title mt-2 mb-0">{{user.name}}</h5>
                     <div class="text-muted mb-2">Lead Developer</div>
+                </div>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-md text-center custom-col">
+                    <button type="button" class="btn btn-success w-full custom-button" id="btn-show-profile-picture">
+                        <i class="align-middle" data-feather="eye"></i> <span class="align-middle"></span>
+                    </button>
+                </div>
+                <div class="col-md text-center custom-col">
+                    <label for="upload-profile-picture" class="btn btn-primary w-full custom-button">
+                        <i class="align-middle" data-feather="upload"></i> <span class="align-middle">&nbsp;Upload</span>
+                    </label>
+                    {{ form.picture(class="form-control form-control-lg " + (" is-invalid" if form.picture.errors else ""), id="upload-profile-picture", accept="image/png, image/jpeg, image/jpg, image/webp") }}
                 </div>
             </div>
         </div>
@@ -17,21 +96,18 @@
         <div class="col-md-8 col-xl-8">
             <div class="card">
                 <div class="card-header">
-
                     <h5 class="card-title mb-0">Profile Details</h5>
                 </div>
                 <div class="card-body h-100">
                     <div class="align-items-start">
-                        <form method="POST">
-                            {{ form.hidden_tag() }}
-                            <div class="mb-3">                                
+                            <div class="mb-3">
                                 <strong>{{ form.name.label(class="form-label") }}</strong>
                                 {{ form.name(class="form-control form-control-lg " + (" is-invalid" if form.name.errors else ""), placeholder="Enter your name", value=user.name or '', autocomplete="off") }}
                                 {% for error in form.name.errors %}
                                     <div class="text-danger small">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                          
+
                             <div class="mb-3">
                                 <strong>{{ form.username.label(class="form-label") }}</strong>
                                 {{ form.username(class="form-control form-control-lg" + (" is-invalid" if form.username.errors else ""), placeholder="Enter your username", value=user.username or '', autocomplete="off") }}
@@ -39,7 +115,7 @@
                                     <div class="text-danger small">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                          
+
                             <div class="mb-3">
                                 <strong>{{ form.email.label(class="form-label") }}</strong>
                                 {{ form.email(class="form-control form-control-lg" + (" is-invalid" if form.email.errors else ""), placeholder="Enter your email", value=user.email or '', autocomplete="off") }}
@@ -57,32 +133,79 @@
         </div>
     </div>
 </div>
-{% endblock  %}
+{% endblock %}
 
 {% block script %}
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        {% if category == 'register_error' %}
-          Swal.fire({
-            title: 'Oops...',
-            icon: 'error',
-            text: '{{ message }}',
-            showConfirmButton: false,
-            timer: 2500
-          });
-        {% elif category == 'success' %}
-          Swal.fire({
-            title: 'Success!',
-            icon: 'success',
-            text: '{{ message }}',
-            showConfirmButton: false,
-            timer: 2500
-          });
-        {% endif %}
-      {% endfor %}
-    {% endwith %}
-  });
+    $(document).ready(function() {
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                {% if category == 'register_error' %}
+                Swal.fire({
+                    title: 'Oops...',
+                    icon: 'error',
+                    text: '{{ message }}',
+                    showConfirmButton: false,
+                    timer: 2500
+                });
+                {% elif category == 'success' %}
+                Swal.fire({
+                    title: 'Success!',
+                    icon: 'success',
+                    text: '{{ message }}',
+                    showConfirmButton: false,
+                    timer: 2500
+                });
+                {% endif %}
+            {% endfor %}
+        {% endwith %}
+
+        $(document).on('click','#btn-show-profile-picture', function(){
+            Swal.fire({
+                imageUrl: `{{ url_for('static', filename='img/' + usersession.picture) }}`,
+                imageWidth: 300,
+                imageHeight: 300,
+                confirmButtonText: "Close",
+            });
+        });
+
+        $('#upload-profile-picture').change(function() {
+            const file = this.files[0];
+            if (file) {
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+                const maxSize = 1 * 1024 * 1024; // 1MB
+
+                if (!allowedTypes.includes(file.type)) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'Please upload a PNG, JPG, JPEG, or WEBP image.',
+                    });
+                    $(this).val(''); // Reset the input
+                    return;
+                }
+
+                if (file.size > maxSize) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'Image size must be less than 1MB.',
+                    });
+                    $(this).val(''); // Reset the input
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('.profile-image').attr('src', e.target.result); // Update preview
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        $('#edit-profile-picture').click(function() {
+            $('#upload-profile-picture').click(); // Trigger file input click
+        });
+    });
 </script>
-{% endblock  %}
+{% endblock %}
