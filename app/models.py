@@ -8,8 +8,10 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(30), nullable=False, unique=True)
     email = db.Column(db.String(50), nullable=False, unique=True)
     password = db.Column(db.String(128), nullable=False)
-    is_active = db.Column(db.Integer, default=1)
-    picture = db.Column(db.String(255))  # Untuk menyimpan URL atau path ke gambar
+    is_active = db.Column(db.Integer)
+    picture = db.Column(db.String(255)) 
+    email_verified_at = db.Column(db.DateTime, nullable=True)
+    email_token = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     created_by = db.Column(db.String(50))
     updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))

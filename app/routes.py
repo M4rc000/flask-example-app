@@ -1,13 +1,13 @@
 from app import db
 from app.models import User
-from app.models import User
-from app.utils.helper import encode_id, decode_id
-from app.forms import RegisterForm, LoginForm, UserForm, UpdateProfileForm, EditManageUserForm, ShowManageUserForm
-from flask import Blueprint, render_template, redirect, url_for, redirect, url_for, request, flash, session, current_app
+from app.utils.helper import encode_id, decode_id, send_verification_email, confirm_token, generate_token
+from app.forms import RegisterForm, LoginForm, UserForm, UpdateProfileForm, EditManageUserForm, ShowManageUserForm, AddManageUserForm
+from flask import Blueprint, abort, render_template, redirect, url_for, redirect, url_for, request, flash, session, current_app, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from . import login_manager
 import sys
 import os
+import pytz
 from flask_dance.contrib.google import google
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
@@ -19,7 +19,7 @@ auth = Blueprint('auth', __name__)
 main = Blueprint('main', __name__)
 
 login_manager.login_view = 'auth.login'
-
+wib = pytz.timezone('Asia/Jakarta')
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -50,19 +50,23 @@ def register():
         if existing_email or existing_username:
             return render_template('auth/register.html', form=form, title="Register")
 
+        token = generate_token(form.email.data)
+
         user = User(
             name=form.name.data,
             username=form.username.data,
             email=form.email.data,
             picture="profile/user.png",
-            created_at=datetime.now(timezone.utc),
+            email_token=token,
+            created_at=datetime.now(wib),
             created_by="System"
         )
 
         user.hash_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        flash('Account created successfully! You can now log in.', 'success')
+        send_verification_email(user)
+        flash('Account created! Please verify your email to activate your account.', 'success')
         return redirect(url_for('auth.login'))
 
     return render_template('auth/register.html', form=form, title="Register")
@@ -75,12 +79,16 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
+        if not user.email_verified_at:
+            print("Not verified")
+            flash("Please verify your email before logging in.", "login_error")
+            return redirect(url_for('auth.login'))
         if user and user.confirm_password(form.password.data):
             login_user(user)
             flash('Login successful!', 'success')
             return redirect(url_for('main.dashboard'))
         else:
-            flash('Invalid username or password', 'danger')
+            flash('Invalid username or password', 'login_error')
     
     return render_template('auth/login.html', form=form, title="Login")
 
@@ -123,6 +131,34 @@ def google_callback():
     # Sekarang, redirect ke route yang akan mengambil informasi pengguna dan melakukan login/registrasi.
     return redirect(url_for("auth.google_login")) # Redirect ke google_login setelah callback
 
+# EMAIL VERIFICATION
+@auth.route('/verify-email/<token>')
+def verify_email(token):
+    try:
+        email = confirm_token(token)  # token should decode and return email
+    except:
+        flash('The verification link is invalid or has expired.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    user = User.query.filter_by(email=email).first_or_404()
+
+    # Optional token match (if saved in DB)
+    if user.email_token != token:
+        flash('Invalid or tampered verification token.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    if not user.email_verified_at:
+        user.email_verified_at = datetime.now(wib)
+        user.is_active = 1
+        db.session.commit()
+        flash('You have verified your account. You can now login.', 'success')
+    else:
+        flash('Account already verified. Please login.', 'success')
+
+    return redirect(url_for('auth.login'))
+
+
+
 @main.route('/admin/dashboard')
 @login_required
 def dashboard():
@@ -141,7 +177,7 @@ def manage_user():
 @main.route('/admin/manage-user/add', methods=['GET', 'POST'])
 @login_required
 def add_manage_user():
-    form = RegisterForm()
+    form = AddManageUserForm()
 
     if form.validate_on_submit():
         existing_username = User.query.filter_by(username=form.username.data).first()
@@ -153,21 +189,21 @@ def add_manage_user():
             form.email.errors.append("Email already exists.")
 
         if existing_email or existing_username:
-            return redirect(url_for('main.manage_user'))
+            return render_template('admin/add_manage_user.html', form=form, title="New User", usersession=current_user)
 
         user = User(
             name=form.name.data,
             username=form.username.data,
             email=form.email.data,
             picture="profile/user.png",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(wib),
             created_by="System"
         )
 
         user.hash_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        flash('Account created successfully! You can now log in.', 'success')
+        flash('User '+ form.username.data +' created successfully!', 'success')
         return redirect(url_for('main.manage_user'))
 
     return render_template('admin/add_manage_user.html', form=form, title="New User", usersession=current_user)
@@ -212,13 +248,17 @@ def edit_manage_user(hashid):
 @login_required
 def delete_manage_user(hashid):
     user_id = decode_id(hashid)
-    if user_id is None:
+    user = User.query.get(user_id)
+    if user is None:
         abort(404)
-    db.session.delete(user_id)
-    db.session.commit()
-    flash('User deleted successfully!', 'success')
-    return redirect(url_for('main.manage_user'))
-
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'User deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'An error occurred while deleting the user'})
+    
 @main.route('/user/profile', methods=['GET', 'POST'])
 @login_required
 def user_profile():
@@ -276,51 +316,3 @@ def user_profile():
             flash("Profile updated successfully!", "success")
             return redirect(url_for('main.user_profile'))
     return render_template('user/profile.html', form=form, usersession=current_user, user=current_user, title="Profile")
-
-@main.route('/users')
-@login_required
-def list_users():
-    users = User.query.all()
-    return render_template('user_list.html', users=users)
-
-@main.route('/user/add', methods=['GET', 'POST'])
-@login_required
-def add_user():
-    form = UserForm()
-    if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
-        if form.password.data:
-            user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        flash('User created successfully', 'success')
-        return redirect(url_for('main.list_users'))
-    return render_template('user_form.html', form=form, action='Add')
-
-@main.route('/user/edit/<int:user_id>', methods=['GET', 'POST'])
-@login_required
-def edit_user(user_id):
-    user = User.query.get_or_404(user_id)
-    form = UserForm(obj=user)
-    form.original_username = user.username
-    form.original_email = user.email
-
-    if form.validate_on_submit():
-        user.username = form.username.data
-        user.email = form.email.data
-        if form.password.data:
-            user.set_password(form.password.data)
-        db.session.commit()
-        flash('User updated successfully', 'success')
-        return redirect(url_for('main.list_users'))
-
-    return render_template('user_form.html', form=form, action='Edit')
-
-@main.route('/user/delete/<int:user_id>', methods=['POST'])
-@login_required
-def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    flash('User deleted successfully', 'info')
-    return redirect(url_for('main.list_users'))

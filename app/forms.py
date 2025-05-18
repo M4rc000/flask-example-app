@@ -14,13 +14,13 @@ class RegisterForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email(), Length(max=50)])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=3)])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match')])
+    picture = FileField('Picture', validators=[Optional()])
     submit = SubmitField('Register')
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
-
 
 class UserForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -51,8 +51,11 @@ class EditManageUserForm(FlaskForm):
     email = StringField('Email', validators=[
         DataRequired(), Email(), Length(max=50)
     ])
+    password = StringField('Password', validators=[
+        DataRequired(), Length(max=255)
+    ])
     is_active = SelectField(
-        'Active Status',
+        'Status',
         choices=[('1', 'Active'), ('0', 'Not Active')],
         validators=[DataRequired()]
     )
@@ -70,3 +73,10 @@ class ShowManageUserForm(FlaskForm):
     is_active = StringField('Status', validators=[
         DataRequired(), Length(max=50)
     ])
+
+class AddManageUserForm(FlaskForm):
+    name = StringField('Name', validators=[DataRequired(), Length(min=3, max=50)])
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=30)])
+    email = StringField('Email', validators=[DataRequired(), Email(), Length(max=50)])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=3)])
+    submit = SubmitField('Save')

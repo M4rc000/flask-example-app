@@ -12,9 +12,10 @@
                 <thead>
                     <tr>
                         <th>#</th>
+                        <th class="text-center">Picture</th>
                         <th>Username</th>
                         <th>Email</th>
-                        <th class="text-center">Active</th>
+                        <th>Active</th>
                         <th class="text-center">Action</th>
                     </tr>
                 </thead>
@@ -22,13 +23,18 @@
                     {% for u in users %}
                     <tr>
                         <td>{{ loop.index }}</td>
+                        <td class="text-center"><img src="{{ url_for('static', filename='img/' + u.picture) }}" alt="{{ u.username }}" style="width: 30px; height: 30px; border-radius: 50%"></td>
                         <td>{{ u.username }}</td>
                         <td>{{ u.email }}</td>
-                        <td class="text-center">
+                        <td class="text-center" style="padding-left: 21px">
                             {% if u.is_active %}
-                                <span class="badge bg-success"><i class="align-center" data-feather="check"></i></span></span>
+                                <span class="badge bg-success d-flex justify-content-center align-items-center"
+                                    style="border-radius: 50%; width: 20px; height: 20px;">
+                                    <i data-feather="check"></i>
+                                </span>
+
                             {% else %}
-                                <span class="badge bg-danger"><i class="align-center" data-feather="x"></i></span></span>
+                                <span class="badge bg-danger d-flex justify-content-center align-items-center" style="border-radius: 50%; width: 20px; height: 20px"><i data-feather="x"></i></span></span>
                             {% endif %}
                         </td>
                         <td class="text-center">
@@ -76,9 +82,10 @@
           {% endfor %}
         {% endwith %}
 
-        $('#btn-delete').on('click', function(){
+        $(document).on('click', '#btn-delete', function(){
             let id = $(this).data('id');
             let username = $(this).data('username');
+            let csrf_token = "{{ csrf_token() }}";
 
             Swal.fire({
                 title: `Do you want delete user: ${username}?`,
@@ -87,7 +94,34 @@
                 confirmButtonText: "Yes",
                 }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href=`/admin/manage-user/delete/${id}`;
+                    $.post({
+                        url: `/admin/manage-user/delete/${id}`,
+                        headers: { 'X-CSRFToken': csrf_token },
+                        success: function(response){
+                            let message = response.message;
+                            if(response.status == 'success'){
+                                Swal.fire({
+                                    title: `Success`,
+                                    text: message,
+                                    icon: "success",
+                                    timer: 2500,
+                                    showConfirmButton: false
+                                });
+                            }else{
+                                Swal.fire({
+                                    title: `Error`,
+                                    text: message,
+                                    icon: "error",
+                                    timer: 2500,
+                                    showConfirmButton: false
+                                });
+                            }
+                            location.reload();
+                        },
+                        error: function() {
+                            Swal.fire("Error", "Failed to delete user.", "error");
+                        }
+                    });
                 }
             });
         });
