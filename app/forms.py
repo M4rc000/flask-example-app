@@ -3,9 +3,8 @@ from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import ValidationError
 from .models import User
 from wtforms.validators import DataRequired, Email, EqualTo, Length
-
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, SelectField, FileField
+from wtforms import StringField, PasswordField, SubmitField, SelectField, FileField, HiddenField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, Optional
 
 class RegisterForm(FlaskForm):
@@ -79,4 +78,22 @@ class AddManageUserForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=3, max=30)])
     email = StringField('Email', validators=[DataRequired(), Email(), Length(max=50)])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=3)])
+    submit = SubmitField('Save')
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired()])
+    submit = SubmitField('Submit')
+
+class ForgotPasswordInputForm(FlaskForm):
+    email = HiddenField('Email')
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=3)])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match')])
+    submit = SubmitField('Save')
+
+class BookMovieForm(FlaskForm):
+    book_id = HiddenField('book_id')
+    movie_id = HiddenField('movie_id')
+    seat_code = StringField('Seat No', validators=[DataRequired()])
+    teater_no = StringField('Teater No', validators=[DataRequired()]) 
+    user_id = HiddenField('user_id')
     submit = SubmitField('Save')

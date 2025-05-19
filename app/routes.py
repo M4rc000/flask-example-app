@@ -1,7 +1,7 @@
 from app import db
-from app.models import User
-from app.utils.helper import encode_id, decode_id, send_verification_email, confirm_token, generate_token
-from app.forms import RegisterForm, LoginForm, UserForm, UpdateProfileForm, EditManageUserForm, ShowManageUserForm, AddManageUserForm
+from app.models import User, Movies, Booking, Movies_Now_Showing
+from app.utils.helper import encode_id, decode_id, send_verification_email, confirm_token, generate_token, send_forgot_password_email
+from app.forms import RegisterForm, LoginForm, UserForm, UpdateProfileForm, EditManageUserForm, ShowManageUserForm, AddManageUserForm, ForgotPasswordForm, ForgotPasswordInputForm, BookMovieForm
 from flask import Blueprint, abort, render_template, redirect, url_for, redirect, url_for, request, flash, session, current_app, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from . import login_manager
@@ -10,7 +10,7 @@ import os
 import pytz
 from flask_dance.contrib.google import google
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from werkzeug.utils import secure_filename
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -99,6 +99,25 @@ def logout():
     flash('Logged out successfully', 'info')
     return redirect(url_for('auth.login'))
 
+@auth.route('/forgot-password', methods=['GET','POST'])
+def forgot_password():
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        email = form.email.data
+        user = User.query.filter_by(email=email).first()
+        form.email.data = user.email
+        if user:
+            token = user.get_reset_password_token()
+            user.reset_password_token = token
+            user.reset_password_expiration = datetime.utcnow() + timedelta(minutes=30) # Contoh masa berlaku 30 menit
+            db.session.commit()
+            send_forgot_password_email(user, token) # Modifikasi fungsi send_forgot_password_email untuk menerima token
+            flash("Silakan periksa email Anda untuk mengubah kata sandi.", "success")
+        else:
+            flash("Email belum terdaftar.", "error")
+        return render_template('auth/forgot_password.html', form=form, title="Lupa Kata Sandi")
+    return render_template('auth/forgot_password.html', form=form, title="Lupa Kata Sandi")
+
 # GOOGLE AUTH
 @auth.route("/google")
 def google_login():
@@ -157,7 +176,25 @@ def verify_email(token):
 
     return redirect(url_for('auth.login'))
 
+@auth.route('/verify-forgotpassword/<token>', methods=['GET','POST'])
+def verify_forgot_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
 
+    user = User.verify_reset_password_token(token)
+    if not user:
+        flash('Tautan reset kata sandi tidak valid atau telah kedaluwarsa.', 'error')
+        return redirect(url_for('auth.forgot_password'))
+
+    form = ForgotPasswordInputForm()
+    if form.validate_on_submit():
+        password = form.password.data
+        user.hash_password(password)
+        db.session.commit()
+        flash('Kata sandi Anda berhasil diperbarui. Silakan login.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/forgot_password_input.html', title="Atur Ulang Kata Sandi", form=form)
 
 @main.route('/admin/dashboard')
 @login_required
@@ -259,6 +296,59 @@ def delete_manage_user(hashid):
         db.session.rollback()
         return jsonify({'status': 'error', 'message': 'An error occurred while deleting the user'})
     
+@main.route('/home/explore', methods=['GET','POST'])
+@login_required
+def explore_film():
+    movies_data = db.session.query(Movies, Movies_Now_Showing.schedule).join(Movies_Now_Showing).all()
+    
+    # Encode ID film untuk digunakan dalam URL
+    formatted_movies = []
+    movie_schedules = {}
+    for movie, schedule in movies_data:
+        movie_id = movie.id
+        if movie_id not in movie_schedules:
+            movie_schedules[movie_id] = []
+        movie_schedules[movie_id].append(schedule)
+    for movie, schedule in movies_data: # change to movies_data
+        movie_id = movie.id
+        if movie_id not in movie_schedules:
+            movie_schedules[movie_id] = []
+        
+        formatted_movies.append({
+            'id': movie.id,
+            'name': movie.name,
+            'year': movie.year,
+            'rating': movie.rating,
+            'picture': movie.picture,
+            'hashid': encode_id(movie.id),  # Encode ID for URL
+            'schedules': movie_schedules.get(movie.id, []) # Pass schedules
+
+        })
+    unique_movies = []
+    seen_movie_ids = set()
+    for movie in formatted_movies:
+        if movie['id'] not in seen_movie_ids:
+            unique_movies.append(movie)
+            seen_movie_ids.add(movie['id'])
+            
+    return render_template('home/explore.html', title="Explore", usersession=current_user, movies=unique_movies, movie_schedules=movie_schedules)
+
+@main.route('/home/book-movie/<hashid>', methods=['GET','POST'])
+@login_required
+def booking_film(hashid):
+    movie_id = decode_id(hashid)
+    form = BookMovieForm()
+    if form.validate_on_submit:
+        book = Booking(
+            book_id = form.book_id.data,
+            movie_id = form.movie_id.data,
+        )
+
+    # Select movies_now_showing.schedule == movie_id
+    #
+
+    return render_template('home/booking_movie.html', title="Explore", usersession=current_user, movies=movies)
+
 @main.route('/user/profile', methods=['GET', 'POST'])
 @login_required
 def user_profile():
