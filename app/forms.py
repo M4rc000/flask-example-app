@@ -91,9 +91,9 @@ class ForgotPasswordInputForm(FlaskForm):
     submit = SubmitField('Save')
 
 class BookMovieForm(FlaskForm):
-    book_id = HiddenField('book_id')
-    movie_id = HiddenField('movie_id')
-    seat_code = StringField('Seat No', validators=[DataRequired()])
+    movie_showing_id = HiddenField('movie_showing_id')
+    seat_id = StringField('Seat No', validators=[DataRequired()])
     teater_no = StringField('Teater No', validators=[DataRequired()]) 
     user_id = HiddenField('user_id')
+    status_payment = HiddenField('status_payment')
     submit = SubmitField('Save')

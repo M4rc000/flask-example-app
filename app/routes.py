@@ -340,11 +340,23 @@ def explore_film():
 @login_required
 def booking_film(hashid):
     movie_now_showing_id = decode_id(hashid)
-    # Ambil informasi penayangan film
-    showing = db.session.query(Movies_Now_Showing).filter_by(id=movie_now_showing_id).first()
+
+    showing = db.session.query(
+        Movies.id,
+        Movies.name,
+        Movies.year,
+        Movies_Now_Showing.schedule,
+        Movies_Now_Showing.teater_id
+    ).join(
+        Movies, Movies.id == Movies_Now_Showing.movie_id
+    ).filter(
+        Movies_Now_Showing.id == movie_now_showing_id
+    ).first()  # gunakan .first() jika hanya 1 data yang diharapkan
+
     if not showing:
-        flash("Penayangan film tidak ditemukan.", "success")
+        flash("Movie not found.", "error")
         return redirect(url_for('main.explore'))
+
 
     # Ambil informasi teater berdasarkan teater_id dari penayangan
     teater = db.session.query(Teater).filter_by(id=showing.teater_id).first()
@@ -359,6 +371,63 @@ def booking_film(hashid):
         teater=teater,
         seats=seats,
         usersession=current_user
+    )
+
+@main.route('/home/booking/confirmation', methods=['GET', 'POST'])
+@login_required
+def confirm_booking():
+    form = BookMovieForm()
+    if form.validate_on_submit:
+        booking = Booking(
+            movie_showing_id = form.movie_showing_id.data,
+            seat_id = form.seat_id.data,
+            teater_no = form.teater_no.data,
+            is_active = 1,
+            user_id = current_user.id,
+            status_payment = 0
+        )
+    # Ambil data kursi & ID penayangan dari form
+    selected_seats = request.form.getlist('seat_ids[]')
+    selected_seats_codes = request.form.getlist('seat_codes[]')
+    showing_id = request.form.get('movie_now_showing_id')
+
+    showing = db.session.query(Movies_Now_Showing).filter_by(id=showing_id).first()
+
+    if not selected_seats or not showing_id:
+        flash('Please select at least one seat and movie showing.', 'error')
+        return redirect(url_for('main.explore_film'))  # Ganti sesuai route
+
+    unavailable_seats = Seats.query.filter(
+        Seats.baris + Seats.kolom.in_(selected_seats),
+        Seats.status != 0,
+        Seats.teater_id == showing.teater_id
+    ).all()
+
+    if unavailable_seats:
+        flash('One or more selected seats are no longer available.', 'error')
+        return redirect(url_for('main.explore_film'))  # Ganti sesuai route
+
+    # Ambil info film dan harga
+    movie_showing = db.session.query(Movies.name, Movies.price).join(
+        Movies_Now_Showing, Movies.id == Movies_Now_Showing.movie_id
+    ).filter(
+        Movies_Now_Showing.id == showing_id
+    ).first()
+
+    if not movie_showing:
+        flash('Movie not found.', 'error')
+        return redirect(url_for('main.explore_film'))
+
+    total_price = len(selected_seats) * movie_showing.price
+
+    return render_template(
+        'home/confirm_booking_movie.html',
+        title="Confirmation Booking Movie",
+        usersession=current_user,
+        selected_seats=selected_seats,
+        movie_name=movie_showing.name,
+        price_per_seat=movie_showing.price,
+        total_price=total_price
     )
 
 @main.route('/user/profile', methods=['GET', 'POST'])

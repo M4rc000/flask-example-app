@@ -6,6 +6,10 @@
     }
 </style>
 <div class="card">
+    <div class="card-header">
+        <h3 style="color: black; padding: 0.3rem "><strong>Movie:</strong> {{moview_showing.name}}</h3>
+        <h4 style="color: black; padding: 0.3rem"><strong>Schedule:</strong> {{moview_showing.schedule.strftime('%H:%M')}}</h4>
+    </div>
     <div class="card-body" style="padding: 1rem">
         {% set grouped_seats = {} %}
         {% for seat in seats %}
@@ -17,14 +21,14 @@
         {% endfor %}
 
         {% for baris, row_seats in grouped_seats.items() %}
-            <div class="d-flex justify-content-center align-items-center mb-2" style="gap: 2rem;">
+            <div class="d-flex justify-content-center align-items-center" style="gap: 2rem;">
                 {% set sorted_seats = row_seats|sort(attribute='kolom') %}
 
                 <!-- Block 1: Kolom 1–4 -->
                 <div class="d-flex" style="margin-top: 1rem">
                     {% for seat in sorted_seats if seat.kolom >= 1 and seat.kolom <= 4 %}
-                        <span class="{{ 'bg-primary' if seat.status == 0 else 'bg-secondary' }} badge d-flex align-items-center justify-content-center mx-1 seat-box"
-                            style="width: 32px; height: 32px;">
+                        <span class="{% if seat.status == 0 %}bg-primary{% elif seat.status == 1 %}bg-secondary{% else %}bg-danger{% endif %} badge d-flex align-items-center justify-content-center mx-1 seat-box"
+                            style="width: 32px; height: 32px" data-seatid="{{ seat.id }}">
                             {{ seat.baris }}{{ seat.kolom }}
                         </span>
                     {% endfor %}
@@ -36,8 +40,8 @@
                 <!-- Block 2: Kolom 5–16 -->
                 <div class="d-flex flex-wrap" style="width: 500px; margin-top: 1rem">
                     {% for seat in sorted_seats if seat.kolom >= 5 and seat.kolom <= 16 %}
-                        <span class="{{ 'bg-primary' if seat.status == 0 else 'bg-secondary' }} badge d-flex align-items-center justify-content-center mx-1 seat-box"
-                            style="width: 32px; height: 32px;">
+                        <span class="{% if seat.status == 0 %}bg-primary{% elif seat.status == 1 %}bg-secondary{% else %}bg-danger{% endif %} badge d-flex align-items-center justify-content-center mx-1 seat-box"
+                            style="width: 32px; height: 32px" data-seatid="{{ seat.id }}">
                             {{ seat.baris }}{{ seat.kolom }}
                         </span>
                     {% endfor %}
@@ -46,21 +50,124 @@
                 <!-- Block 3: Kolom 17–20 -->
                 <div class="d-flex" style="margin-top: 1rem">
                     {% for seat in sorted_seats if seat.kolom >= 17 %}
-                        <span class="{{ 'bg-primary' if seat.status == 0 else 'bg-secondary' }} badge d-flex align-items-center justify-content-center mx-1 seat-box"
-                            style="width: 32px; height: 32px;">
+                        <span class="{% if seat.status == 0 %}bg-primary{% elif seat.status == 1 %}bg-secondary{% else %}bg-danger{% endif %} badge d-flex align-items-center justify-content-center mx-1 seat-box"
+                            style="width: 32px; height: 32px" data-seatid="{{ seat.id }}">
                             {{ seat.baris }}{{ seat.kolom }}
                         </span>
                     {% endfor %}
                 </div>
             </div>
         {% endfor %}
+
+        <div class="d-flex justify-content-center align-items-center mb-2" style="gap: 2rem; margin: 2rem 1.5rem 0 1.5rem; background-color: black; padding: 1rem 0;">
+            <div class="text-center w-100 text-white" style="font-size: 1rem;">
+                Screen
+            </div>
+        </div>
+
+        <div id="seat-info-box" class="mt-3 mx-4"></div>
+
+        <form id="seat-form" method="POST" action="{{ url_for('main.confirm_booking') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="movie_now_showing_id" value="{{ moview_showing.id }}">
+        </form>
+
     </div>
 </div>
 {% endblock %}
 
 {% block script %}
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
+    $(document).ready(function () {
+        let selectedSeats = [];
+
+        function renderSelectionUI() {
+            if (selectedSeats.length > 0) {
+                $('#seat-info-box').html(`
+                    <div class="alert alert-info d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${selectedSeats.length}</strong> seat(s) selected: 
+                            ${selectedSeats.map(seat => `<span class="badge bg-success mx-1">${seat.code}</span>`).join('')}
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-warning me-2" id="reset-selection">Reset</button>
+                            <button class="btn btn-sm btn-success" id="submit-selection">Submit</button>
+                        </div>
+                    </div>
+                `);
+            } else {
+                $('#seat-info-box').empty();
+            }
+        }
+
+        // On seat click
+        $('.seat-box').click(function () {
+            let seatCode = $(this).text().trim();
+            let seatID = $(this).data('seatid');
+
+            if ($(this).hasClass('bg-primary') || $(this).hasClass('bg-success')) {
+                let seatIndex = selectedSeats.findIndex(seat => seat.code === seatCode);
+
+                if ($(this).hasClass('bg-success')) {
+                    // Unselect
+                    $(this).removeClass('bg-success').addClass('bg-primary');
+                    if (seatIndex !== -1) selectedSeats.splice(seatIndex, 1);
+                } else {
+                    // Select
+                    $(this).removeClass('bg-primary').addClass('bg-success');
+                    selectedSeats.push({ code: seatCode, id: seatID });
+                }
+
+                renderSelectionUI();
+            }
+        });
+
+        // Reset selection
+        $(document).on('click', '#reset-selection', function () {
+            $('.seat-box.bg-success').removeClass('bg-success').addClass('bg-primary');
+            selectedSeats = [];
+            renderSelectionUI();
+        });
+
+        // Submit selection
+        $(document).on('click', '#submit-selection', function () {
+            if (selectedSeats.length === 0) return;
+
+            let seatIDs = selectedSeats.map(seat => seat.id);
+            let seatCodes = selectedSeats.map(seat => seat.code);
+
+            let form = $('#seat-form');
+            
+            // Clear previous hidden inputs (if any)
+            form.find('input[name="seat_ids[]"]').remove();
+            form.find('input[name="seat_codes[]"]').remove();
+
+            // Append seat IDs
+            seatIDs.forEach(id => {
+                form.append(`<input type="hidden" name="seat_ids[]" value="${id}">`);
+            });
+
+            // Append seat codes
+            seatCodes.forEach(code => {
+                form.append(`<input type="hidden" name="seat_codes[]" value="${code}">`);
+            });
+
+            Swal.fire({
+                title: 'Proceed with selection?',
+                html: `You selected <strong>${seatCodes.length}</strong> seat(s): <br>${seatCodes.join(', ')}`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, continue',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+
+
+        // Flash messages
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% for category, message in messages %}
                 {% if category == 'error' %}
@@ -84,4 +191,5 @@
         {% endwith %}
     });
 </script>
+
 {% endblock %}

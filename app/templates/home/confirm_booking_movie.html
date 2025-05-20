@@ -1,0 +1,36 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        
+    </div>
+</div>
+{% endblock  %}
+
+{% block script %}
+<script>
+  $(document).ready(function(){
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        {% if category == 'error' %}
+          Swal.fire({
+            title: 'Oops...',
+            icon: 'error',
+            text: '{{ message }}',
+            showConfirmButton: false,
+            timer: 3000
+          });
+        {% elif category == 'success' %}
+          Swal.fire({
+            title: 'Success!',
+            icon: 'success',
+            text: '{{ message }}',
+            showConfirmButton: false,
+            timer: 3000
+          });
+        {% endif %}
+      {% endfor %}
+    {% endwith %}
+  });
+</script>
+{% endblock %}

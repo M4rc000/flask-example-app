@@ -53,6 +53,7 @@ class Movies(db.Model): # Tidak perlu UserMixin
     year = db.Column(db.String(10), nullable=False)
     rating = db.Column(db.String(10), nullable=False)
     duration = db.Column(db.String(30), nullable=False)
+    price = db.Column(db.String(30), nullable=False)
     is_active = db.Column(db.Integer, default=1) # 1 untuk aktif, 0 untuk tidak aktif
     picture = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
@@ -127,6 +128,7 @@ class Booking(db.Model):
     teater_no = db.Column(db.String(1), nullable=False)  # Tambahkan teater_no
     is_active = db.Column(db.Integer, default=1) # 1 untuk aktif, 0 untuk tidak aktif
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status_payment = db.Column(db.Integer, default=0) # 1: Completed, 0: Pending, 2: Cancel
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     created_by = db.Column(db.String(50))
     updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
