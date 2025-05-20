@@ -22,7 +22,7 @@
 
     .card-img-top {
         display: block;
-        width: 225px; /* Tetapkan lebar gambar */
+        width: 235px; /* Tetapkan lebar gambar */
         height: 250px; /* Tetapkan tinggi gambar */
         object-fit: cover; /* Memastikan gambar mengisi container tanpa distorsi */
         transition: opacity 0.3s ease;
@@ -78,26 +78,28 @@
     <div class="card-body">
         <div class="movie-card-container">
             {% for m in movies %}
-                <div class="movie-card">
-                    <a href="/home/book-movie/{{ m.hashid }}">
-                        <div class="card-image-container">
-                            <img class="card-img-top" src="{{ url_for('static', filename='img/'+ m.picture) }}" alt="{{ m.title }}">
-                            <div class="overlay">
-                                {% if m.rating %}
-                                <div class="rating">
-                                    <i class="align-middle me-2" data-feather="star"></i> <span class="align-middle"></span> {{ m.rating }}
-                                </div>
-                                {% endif %}
+                <div class="movie-card" style="margin: .5rem">
+                    <div class="card-image-container">
+                        <img class="card-img-top" src="{{ url_for('static', filename='img/'+ m.picture) }}" alt="{{ m.title }}">
+                        <div class="overlay">
+                            {% if m.rating %}
+                            <div class="rating">
+                                <i class="align-middle me-2" data-feather="star"></i> <span class="align-middle"></span> {{ m.rating }}
                             </div>
+                            {% endif %}
                         </div>
-                    </a>
+                    </div>
                     <div class="card-body">
-                        <h5 class="card-title mb-1" style="color: grey">{{ m.name }}</h5>
-                        <h6 class="card-title">{{ m.year }}</h6>
+                        <h5 class="card-title mb-1" style="color: black">{{ m.name }}</h5>
+                        <h6 class="card-title" style="color: grey">{{ m.year }}</h6>
                     </div>
                     <div class="card-footer">
                         {% for schedule in m.schedules %}
-                            <span class="badge bg-secondary" style="margin: 0 3px 0 3px; padding: 10px; font-size: 13px" data-full-time="{{ schedule }}">{{ schedule.strftime('%H:%M') }}</span>
+                            <a href="/home/book-movie/{{ schedule.id }}" style="text-decoration: none">
+                                <span class="badge bg-secondary" style="margin: 0 3px 0 3px; padding: 10px; font-size: 13px" data-full-time="{{ schedule.time }}">
+                                    {{ schedule.time.strftime('%H:%M') }}
+                                </span>
+                            </a>
                         {% endfor %}
                     </div>
                 </div>

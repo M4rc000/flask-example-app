@@ -1,12 +1,59 @@
 {% extends "layouts/base.html" %}
 {% block content %}
+<style>
+    .seat-box{
+        cursor: pointer;
+    }
+</style>
 <div class="card">
-    <div class="card-body">
-        <div class="row">
-            <div class="col">
-                <div class="card"></div>
+    <div class="card-body" style="padding: 1rem">
+        {% set grouped_seats = {} %}
+        {% for seat in seats %}
+            {% set baris = seat.baris %}
+            {% if baris not in grouped_seats %}
+                {% set _ = grouped_seats.update({baris: []}) %}
+            {% endif %}
+            {% set _ = grouped_seats[baris].append(seat) %}
+        {% endfor %}
+
+        {% for baris, row_seats in grouped_seats.items() %}
+            <div class="d-flex justify-content-center align-items-center mb-2" style="gap: 2rem;">
+                {% set sorted_seats = row_seats|sort(attribute='kolom') %}
+
+                <!-- Block 1: Kolom 1–4 -->
+                <div class="d-flex" style="margin-top: 1rem">
+                    {% for seat in sorted_seats if seat.kolom >= 1 and seat.kolom <= 4 %}
+                        <span class="{{ 'bg-primary' if seat.status == 0 else 'bg-secondary' }} badge d-flex align-items-center justify-content-center mx-1 seat-box"
+                            style="width: 32px; height: 32px;">
+                            {{ seat.baris }}{{ seat.kolom }}
+                        </span>
+                    {% endfor %}
+                </div>
+
+                <!-- Spacer -->
+                <div class="fw-bold text-danger"><span style="margin-right: 0.1px; margin-top: 1rem"></span></div>
+
+                <!-- Block 2: Kolom 5–16 -->
+                <div class="d-flex flex-wrap" style="width: 500px; margin-top: 1rem">
+                    {% for seat in sorted_seats if seat.kolom >= 5 and seat.kolom <= 16 %}
+                        <span class="{{ 'bg-primary' if seat.status == 0 else 'bg-secondary' }} badge d-flex align-items-center justify-content-center mx-1 seat-box"
+                            style="width: 32px; height: 32px;">
+                            {{ seat.baris }}{{ seat.kolom }}
+                        </span>
+                    {% endfor %}
+                </div>
+
+                <!-- Block 3: Kolom 17–20 -->
+                <div class="d-flex" style="margin-top: 1rem">
+                    {% for seat in sorted_seats if seat.kolom >= 17 %}
+                        <span class="{{ 'bg-primary' if seat.status == 0 else 'bg-secondary' }} badge d-flex align-items-center justify-content-center mx-1 seat-box"
+                            style="width: 32px; height: 32px;">
+                            {{ seat.baris }}{{ seat.kolom }}
+                        </span>
+                    {% endfor %}
+                </div>
             </div>
-        </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}

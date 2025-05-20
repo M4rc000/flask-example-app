@@ -70,6 +70,7 @@ class Movies_Now_Showing(db.Model): # Tidak perlu UserMixin
     __tablename__ = 'movies_now_showing'
     id = db.Column(db.Integer, primary_key=True)
     movie_id = db.Column(db.Integer, db.ForeignKey('movies.id'), nullable=False)
+    teater_id = db.Column(db.Integer, db.ForeignKey('teater.id'), nullable=False)
     schedule = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     created_by = db.Column(db.String(50))

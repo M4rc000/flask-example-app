@@ -1,5 +1,5 @@
 from app import db
-from app.models import User, Movies, Booking, Movies_Now_Showing
+from app.models import User, Movies, Booking, Movies_Now_Showing, Teater, Seats
 from app.utils.helper import encode_id, decode_id, send_verification_email, confirm_token, generate_token, send_forgot_password_email
 from app.forms import RegisterForm, LoginForm, UserForm, UpdateProfileForm, EditManageUserForm, ShowManageUserForm, AddManageUserForm, ForgotPasswordForm, ForgotPasswordInputForm, BookMovieForm
 from flask import Blueprint, abort, render_template, redirect, url_for, redirect, url_for, request, flash, session, current_app, jsonify
@@ -299,16 +299,20 @@ def delete_manage_user(hashid):
 @main.route('/home/explore', methods=['GET','POST'])
 @login_required
 def explore_film():
-    movies_data = db.session.query(Movies, Movies_Now_Showing.schedule).join(Movies_Now_Showing).all()
+    movies_data = db.session.query(Movies, Movies_Now_Showing).join(Movies_Now_Showing).all()
     
     # Encode ID film untuk digunakan dalam URL
     formatted_movies = []
     movie_schedules = {}
-    for movie, schedule in movies_data:
+    for movie, showing in movies_data:
         movie_id = movie.id
         if movie_id not in movie_schedules:
             movie_schedules[movie_id] = []
-        movie_schedules[movie_id].append(schedule)
+        movie_schedules[movie_id].append({
+            'id': encode_id(showing.id),
+            'time': showing.schedule
+        })
+
     for movie, schedule in movies_data: # change to movies_data
         movie_id = movie.id
         if movie_id not in movie_schedules:
@@ -320,34 +324,42 @@ def explore_film():
             'year': movie.year,
             'rating': movie.rating,
             'picture': movie.picture,
-            'hashid': encode_id(movie.id),  # Encode ID for URL
-            'schedules': movie_schedules.get(movie.id, []) # Pass schedules
-
+            'hashid': encode_id(movie.id),
+            'schedules': movie_schedules.get(movie.id, [])
         })
+
     unique_movies = []
     seen_movie_ids = set()
     for movie in formatted_movies:
         if movie['id'] not in seen_movie_ids:
             unique_movies.append(movie)
             seen_movie_ids.add(movie['id'])
-            
     return render_template('home/explore.html', title="Explore", usersession=current_user, movies=unique_movies, movie_schedules=movie_schedules)
 
 @main.route('/home/book-movie/<hashid>', methods=['GET','POST'])
 @login_required
 def booking_film(hashid):
-    movie_id = decode_id(hashid)
-    form = BookMovieForm()
-    if form.validate_on_submit:
-        book = Booking(
-            book_id = form.book_id.data,
-            movie_id = form.movie_id.data,
-        )
+    movie_now_showing_id = decode_id(hashid)
+    # Ambil informasi penayangan film
+    showing = db.session.query(Movies_Now_Showing).filter_by(id=movie_now_showing_id).first()
+    if not showing:
+        flash("Penayangan film tidak ditemukan.", "success")
+        return redirect(url_for('main.explore'))
 
-    # Select movies_now_showing.schedule == movie_id
-    #
+    # Ambil informasi teater berdasarkan teater_id dari penayangan
+    teater = db.session.query(Teater).filter_by(id=showing.teater_id).first()
 
-    return render_template('home/booking_movie.html', title="Explore", usersession=current_user, movies=movies)
+    # Ambil semua kursi untuk teater tersebut
+    seats = db.session.query(Seats).filter_by(teater_id=showing.teater_id).all()
+
+    return render_template(
+        'home/booking_movie.html',
+        title="Book Movie",
+        moview_showing=showing,
+        teater=teater,
+        seats=seats,
+        usersession=current_user
+    )
 
 @main.route('/user/profile', methods=['GET', 'POST'])
 @login_required
